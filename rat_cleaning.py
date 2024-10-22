@@ -1,8 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
+import seaborn as sns
+import matplotlib.colors as mcolors
 
 
+
+################################## DATA CLEANING ###############################
 df = pd.read_csv("Rat_Sightings_20240917.csv")
 # print(df.columns)
 
@@ -10,8 +14,28 @@ df = pd.read_csv("Rat_Sightings_20240917.csv")
 df = df[['Created Date', 'Location Type', 'Incident Zip', 'Community Board', 'Borough', 'Latitude', 'Longitude']]
 # print(df.columns)
 # print(df.head())
-# print(df.size) ----------------------------------------- 1772883
+# print(df.size)
 
+################# Filter Dates ######################
+df['Created Date'] = pd.to_datetime(df['Created Date'])
+
+# Extract month, week, and day information
+df['Month'] = df['Created Date'].dt.month
+df['Week'] = df['Created Date'].dt.isocalendar().week
+df['Day'] = df['Created Date'].dt.day
+
+# Check the updated dataframe
+print(df[['Created Date', 'Month', 'Week', 'Day']].head())
+
+df['Created Date'] = pd.to_datetime(df['Created Date'])
+
+# Filter the DataFrame for rows where the year is 2021
+# df_2021 = df[df['Created Date'].dt.year == 2021]
+# print(df_2021.head())
+# print(f"Number of entries for the year 2021: {len(df_2021)}")
+
+
+########################## Filter Location Types ###############################
 unique_location_types = df['Location Type'].unique()
 # print(unique_location_types)
 
@@ -42,7 +66,7 @@ residential_df = df[df['Location Type'].isin(residential_mapping.values())]
 nonresidential_df = df[~df['Location Type'].isin(residential_mapping.values())]
 nonresidential_df = nonresidential_df[~nonresidential_df['Location Type'].isin(['Other', 'Other (Explain Below)'])]
 
-# print("Unique entries in residential_df (Location Type):")
+# print("\nUnique entries in residential_df (Location Type):")
 # print(residential_df['Location Type'].unique())
 # print(residential_df.shape)
 
@@ -58,7 +82,7 @@ nonresidential_count = nonresidential_df.shape[0]
 # Data for the pie chart
 labels = ['Residential', 'Non-Residential']
 sizes = [residential_count, nonresidential_count]
-colors = ['blue', 'purple']
+colors = ['pink', 'lightblue']  
 
 # Pie chart 
 plt.figure(figsize=(8, 6))
@@ -68,32 +92,44 @@ plt.title('Rat Sightings Proportion: Residential vs Non-Residential Areas')
 plt.axis('equal')
 plt.show()
 
-# Convert 'Created Date' to datetime format
-df['Created Date'] = pd.to_datetime(df['Created Date'])
+############################# Outliers ########################################
 
-# Extract month, week, and day information
-df['Month'] = df['Created Date'].dt.month
-df['Week'] = df['Created Date'].dt.isocalendar().week
-df['Day'] = df['Created Date'].dt.day
+# Scatter and heatmap plot for Longitude and Latitude (identify outlier locations)
+df = df.dropna(subset=['Latitude', 'Longitude'])
 
-# Check the updated dataframe
-print(df[['Created Date', 'Month', 'Week', 'Day']].head())
+plt.figure(figsize=(10, 6))
+plt.scatter(df['Longitude'], df['Latitude'], alpha=0.5, color='salmon')
+plt.title('Scatter Plot of Rat Sightings: Longitude vs Latitude')
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.grid(True)
+plt.show()
 
-# Check the updated dataframe
-print(df[['Created Date', 'Month', 'Week', 'Day']].head())
+# Create a custom colormap from pink to blue-grey
+cmap = mcolors.LinearSegmentedColormap.from_list("custom_cmap", ["pink", "lightblue", "grey"])
 
+# Create the hexbin plot with the custom colormap
+plt.figure(figsize=(10, 6))
+plt.hexbin(df['Longitude'], df['Latitude'], gridsize=50, cmap=cmap, mincnt=1)
+plt.colorbar(label='Number of Rat Sightings')
+plt.title('Geographic Density Heatmap of Rat Sightings (2011-2021)')
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.show()
 
 # Count rat sightings per month
 rat_sightings_by_month = df['Month'].value_counts().sort_index()
 
 # Plot the results
 plt.figure(figsize=(10, 6))
-rat_sightings_by_month.plot(kind='bar')
+rat_sightings_by_month.plot(kind='bar', color='lightblue')
 plt.title('Count of Rat Sightings per Month')
 plt.xlabel('Month')
 plt.ylabel('Number of Sightings')
 plt.xticks(rotation=0)
 plt.show()
+
+############################## HYPOTHESIS TESTS ################################
 
 winter_months = [12, 1, 2]
 summer_months = [6, 7, 8]
@@ -118,10 +154,9 @@ print("NaN in summer data:", summer_data.isna().sum())
 winter_data_clean = winter_data.dropna(subset=['Incident Zip', 'Latitude', 'Longitude'])
 summer_data_clean = summer_data.dropna(subset=['Incident Zip', 'Latitude', 'Longitude'])
 
-# Check cleaned data
-print("Cleaned winter data count:", len(winter_data_clean))
-print("Cleaned summer data count:", len(summer_data_clean))
-
+# # Check cleaned data
+# print("Cleaned winter data count:", len(winter_data_clean))
+# print("Cleaned summer data count:", len(summer_data_clean))
 
 # Count the number of sightings per day in both seasons
 winter_sightings_per_day = winter_data_clean['Created Date'].dt.date.value_counts()
@@ -131,38 +166,6 @@ summer_sightings_per_day = summer_data_clean['Created Date'].dt.date.value_count
 t_stat, p_value = stats.ttest_ind(winter_sightings_per_day, summer_sightings_per_day, equal_var=False)
 
 print(f'T-statistic: {t_stat}, P-value: {p_value}')
-
-
-
-#########################################################################
-# Borough and Community Board
-
-import pandas as pd
-import scipy.stats as stats
-
-
-unique_zip_codes = df['Incident Zip'].unique()
-unique_community_boards = df['Community Board'].unique()
-
-# print("Unique Zip Codes:")
-# print(unique_zip_codes)
-
-# print("\nUnique Community Boards:")
-# print(unique_community_boards)
-
-# Count of rat sightings by Zip Code and Community Board
-zip_code_counts = df['Incident Zip'].value_counts()
-community_board_counts = df['Community Board'].value_counts()
-
-# Plot: Number of rat sightings per zip code
-plt.figure(figsize=(10, 6))
-
-zip_code_counts.plot(kind='bar', color='skyblue')
-plt.title('Number of Rat Sightings per Zip Code')
-plt.xlabel('Zip Code')
-plt.ylabel('Number of Rat Sightings')
-plt.xticks(rotation=90)
-plt.show()
 
 
 # Group by Borough and Community Board and count the number of sightings
@@ -179,10 +182,8 @@ plt.legend(title='Community Board', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
 plt.show()
 
-df = pd.read_csv("Rat_Sightings_20240917.csv")
-
 # Create a contingency table for Borough and Rat Sightings (count by borough)
-contingency_table = pd.crosstab(df['Borough'], df['Community Board'])  # Adjust column names as necessary
+contingency_table = pd.crosstab(df['Borough'], df['Community Board']) 
 
 # Perform Chi-Square Test of Independence
 chi2_stat, p_val, dof, expected = stats.chi2_contingency(contingency_table)
@@ -195,6 +196,6 @@ print(f"Expected Frequencies: \n{pd.DataFrame(expected, index=contingency_table.
 alpha = 0.05  
 
 if p_val < alpha:
-    print("Reject the Null Hypothesis (H₀): The number of rat sightings depends on the borough.")
+    print("As the p-value of {p_val} is less than the significance level, alpha= {alpha}, we reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough. This is because we have significant evidence in support of teh Alternative Hypothesis that the number of rat sightings depends on the borough.")
 else:
-    print("Fail to Reject the Null Hypothesis (H₀): The number of rat sightings is independent of the borough.")
+    print("As the p-value of {p_val} is not less than the significance level, alpha= {alpha}, we fail to Reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough.")
