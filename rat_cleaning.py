@@ -3,10 +3,13 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import seaborn as sns
 import matplotlib.colors as mcolors
+from scipy.stats import mannwhitneyu
 
 
 
-################################## DATA CLEANING ###############################
+
+
+############################## DATA CLEANING ####################################
 df = pd.read_csv("Rat_Sightings_20240917.csv")
 # print(df.columns)
 
@@ -167,7 +170,6 @@ t_stat, p_value = stats.ttest_ind(winter_sightings_per_day, summer_sightings_per
 
 print(f'T-statistic: {t_stat}, P-value: {p_value}')
 
-
 # Group by Borough and Community Board and count the number of sightings
 borough_community_group = df.groupby(['Borough', 'Community Board']).size().unstack(fill_value=0)
 
@@ -196,6 +198,57 @@ print(f"Expected Frequencies: \n{pd.DataFrame(expected, index=contingency_table.
 alpha = 0.05  
 
 if p_val < alpha:
-    print("As the p-value of {p_val} is less than the significance level, alpha= {alpha}, we reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough. This is because we have significant evidence in support of teh Alternative Hypothesis that the number of rat sightings depends on the borough.")
+    print(f"As the p-value of {p_val:.4f} is less than the significance level, alpha = {alpha:.4f}, we reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough. This is because we have significant evidence in support of the Alternative Hypothesis that the number of rat sightings depends on the borough.")
 else:
-    print("As the p-value of {p_val} is not less than the significance level, alpha= {alpha}, we fail to Reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough.")
+    print(f"As the p-value of {p_val:.4f} is not less than the significance level, alpha = {alpha:.4f}, we fail to reject the Null Hypothesis (H₀) that the number of rat sightings is independent of the borough.")
+################################################################################
+
+
+# # Create the residential and non-residential DataFrames
+# residential_df = df[df['Location Type'].isin(residential_mapping.values())]
+# nonresidential_df = df[~df['Location Type'].isin(residential_mapping.values())]
+# nonresidential_df = nonresidential_df[~nonresidential_df['Location Type'].isin(['Other', 'Other (Explain Below)'])]
+
+# print("\nUnique entries in residential_df (Location Type):")
+# print(residential_df['Location Type'].unique())
+# print(residential_df.shape)
+
+# print("\nUnique entries in nonresidential_df (Location Type):")
+# print(nonresidential_df['Location Type'].unique())
+# print(nonresidential_df.shape)
+
+
+# # Basic Data Exploration - residential vs nonresidential pie chart
+# residential_count = residential_df.shape[0]
+# nonresidential_count = nonresidential_df.shape[0]
+# Count sightings
+residential_sightings = residential_df['Incident Zip'].value_counts()
+non_residential_sightings = nonresidential_df['Incident Zip'].value_counts()
+
+# Mann-Whitney U Test
+u_stat, p_value = mannwhitneyu(residential_sightings, non_residential_sightings, alternative='two-sided')
+
+# Output results
+print(f'Mann-Whitney U Statistic: {u_stat}, P-value: {p_value}')
+
+alpha = 0.05
+
+if p_value < alpha:
+    print(f"As the p-value of {p_value:.4f} is less than the significance level, alpha = {alpha:.4f}, we reject the Null Hypothesis (H₀) that the distribution of rat sightings in residential areas is equal to that in non-residential areas. This proves that we have statistically significant evidence to conclude in favor of the alternative hypothesis that the distribution of rat sightings in residential areas is not equal to that in non-residential areas.")
+else:
+    print(f"As the p-value of {p_value:.4f} is not less than the significance level, alpha = {alpha:.4f}, we fail to reject the Null Hypothesis (H₀) and thus conclude that the distribution of rat sightings in residential areas is equal to that in non-residential areas.")
+
+# Visualization
+counts = pd.DataFrame({
+    'Area Type': ['Residential', 'Non-Residential'],
+    'Sightings': [residential_sightings.sum(), non_residential_sightings.sum()]
+})
+
+plt.figure(figsize=(8, 5))
+plt.bar(counts['Area Type'], counts['Sightings'], color=['lightblue', 'salmon'])
+plt.title('Total Rat Sightings: Residential vs Non-Residential Areas')
+plt.xlabel('Area Type')
+plt.ylabel('Number of Sightings')
+plt.xticks(rotation=0)
+plt.grid(axis='y')
+plt.show()
