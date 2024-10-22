@@ -14,10 +14,10 @@ df = df[['Created Date', 'Location Type', 'Incident Zip', 'Community Board', 'Bo
 
 # Get unique values in 'Location Type'
 unique_location_types = df['Location Type'].unique()
-# print(unique_location_types)
+print(unique_location_types)
 
 # Filter out rows with 'Location Type' that are not related to households/family
-household_types = ['1-2 Family Dwelling', '3+ Family Apt. Building', 'Mixed Use Building']
+household_types = ['1-2 Family Dwelling', '3+ Family Apt. Building', '3+ Family Mixed Use Building', 'Mixed Use Building', '1-2 Family Mixed Use Building', '3+ Family Apartment Building', '1-3 Family Dwelling', 'Apartment', 'Residential Property', 'Private House', '1-3 Family Mixed Use Building', '3+ Family Apt.' '1-2 FamilyDwelling', '3+Family Apt.', '3+ Family Apt' ]
 df = df[df['Location Type'].isin(household_types)]
 # print(df.head())
 # print(df.size) # 1073513
